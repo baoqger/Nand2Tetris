@@ -76,6 +76,7 @@ class Parser {
 class codeWriter {
     constructor(inputfile) {
         let outputfile = inputfile.replace('.vm', '.asm')
+        this.filename = outputfile.split('/').slice(-1)[0].split('.')[0]
         fs.writeFileSync(outputfile, '') // remove the existing file
         this.fd = fs.openSync(outputfile, 'a')
     }
@@ -102,16 +103,48 @@ class codeWriter {
                 result = this._translatePushLocal(segment, index)
             } else if (segment === 'temp') {
                 result = this._translatePushTemp(segment, index)
+            } else if (segment === 'pointer') {
+                result = this._translatePushPointer(segment, index)
+            } else if (segment === 'static') {
+                result = this._translatePushStatic(this.filename, index)
             }
         } else if (vmCommand === 'pop') {
             if (segment === 'local' || segment === 'argument' || segment === 'this' || segment === 'that') {
                 result = this._translatePopLocal(segment, index)
             } else if (segment === 'temp') {
                 result = this._translatePopTemp(segment, index)
+            } else if (segment === 'pointer') {
+                result = this._translatePopPointer(segment, index)
+            } else if (segment === 'static') {
+                result = this._translatePopStatic(this.filename, index)
             }
         }
         console.log('asm pushpop...\n', result)
         fs.appendFileSync(this.fd, result, 'utf8')
+    }
+
+    _translatePushStatic(filename, index) {
+        let varname = `${filename}.${index}`
+        let result = `@${varname}\nD=M\n@SP\nA=M\nM=D\n${basicLogicMap.SPIncrease}`
+        return result
+    }
+
+    _translatePopStatic(filename, index) {
+        let varname = `${filename}.${index}`
+        let result = `${basicLogicMap.SPDecrease}@SP\nA=M\nD=M\n@${varname}\nM=D\n`
+        return result
+    }
+
+    _translatePushPointer(segment, index) {
+        let pointer = Number(index) ? 'THAT' : 'THIS'
+        let result = `@${pointer}\nD=M\n@SP\nA=M\nM=D\n${basicLogicMap.SPIncrease}`
+        return result
+    }
+
+    _translatePopPointer(segment, index) {
+        let pointer = Number(index) ? 'THAT' : 'THIS'
+        let result = `${basicLogicMap.SPDecrease}@SP\nA=M\nD=M\n@${pointer}\nM=D\n`
+        return result
     }
 
     _translatePopTemp(segment, index) {
