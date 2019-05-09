@@ -63,7 +63,7 @@ class Parser {
         this.currentCommand = null
         this.currentIndex = 0
         this.commandsLength = this.allCommands.length
-        console.log('debug all commands: ', this.allCommands)
+        // console.log('debug all commands: ', this.allCommands)
     }
 
     hasMoreCommands() {
@@ -82,19 +82,24 @@ class codeWriter {
         let outputfile
         if (isFile) {
             outputfile = inputfile.replace('.vm', '.asm')
+            // the filename of output result file
             this.filename = outputfile.split('/').slice(-1)[0].split('.')[0]
         } else {
-            outputfile = `${inputfile}.asm`
-            this.filename = outputfile.split('/').slice(-1)[0]
+            // the filename of output result file
+            this.filename = inputfile.split('/').slice(-1)[0]
+            outputfile = `${inputfile}/${this.filename}.asm`
         }
-        // let outputfile = inputfile.replace('.vm', '.asm')
-        // this.filename = outputfile.split('/').slice(-1)[0].split('.')[0]
         fs.writeFileSync(outputfile, '') // remove the existing file
-        this.funcName = ''
+        this.funcName = 'Bootstrap'
         this.callIndex = 0
         this.fd = fs.openSync(outputfile, 'a')
     }
 
+    setFileName(filepath) {
+        let filename =  filepath.split('/').slice(-1)[0].split('.')[0]
+        this.filename = filename
+    }
+    
     writeArithmetic(index, command) {
         let vmCommand = command[0]
         if (vmCommand === 'eq' || vmCommand === 'gt' || vmCommand === 'lt') {
@@ -103,11 +108,11 @@ class codeWriter {
         } else {
             fs.appendFileSync(this.fd, vmCommandsMap[vmCommand], 'utf8')
         }
-        console.log('asm arithmetic..\n', vmCommandsMap[vmCommand])
+        // console.log('asm arithmetic..\n', vmCommandsMap[vmCommand])
     }
 
     writePushPop(command) {
-        console.log('push pop...')
+        // console.log('push pop...')
         var result
         let [vmCommand, segment, index ] = command
         if (vmCommand === 'push') {
@@ -133,7 +138,7 @@ class codeWriter {
                 result = this._translatePopStatic(this.filename, index)
             }
         }
-        console.log('asm pushpop...\n', result)
+        // console.log('asm pushpop...\n', result)
         fs.appendFileSync(this.fd, result, 'utf8')
     }
 
@@ -158,7 +163,7 @@ class codeWriter {
     }
 
     writeFunction(command) {
-        console.log('function...')
+        // console.log('function...')
         let [vmCommand, fName, numVar] = command
         this._setCurrentFunctionName(fName)
         let fNameLabel = `${this.filename}.${fName}`
@@ -188,9 +193,9 @@ class codeWriter {
     }
 
     writeReturn(command) {
-        console.log('return...')
-        this._setCurrentFunctionName('')
-        this._resetCallIndex(0)
+        // console.log('return...')
+        // this._setCurrentFunctionName('')
+        // this._resetCallIndex(0)
         let result = `
             @LCL 
             D=M
@@ -307,7 +312,7 @@ class codeWriter {
             0;JMP
             (${returnAddr})
         `
-        console.log('writeCall...')
+        // console.log('writeCall...')
         fs.appendFileSync(this.fd, result, 'utf8')
     }
 
@@ -410,21 +415,26 @@ function main() {
     let args = process.argv.slice(2)
     let inputFile = args[0]
     // handle file or directory
+    // console.log('inputfile...', inputFile)
     let fileStats = fs.statSync(inputFile)
     let isFile = fileStats.isFile()
-    console.log('is file', isFile)
-    let inputFiles = isFile ? [inputFile] : fs.readdirSync(inputFile)
-    console.log('input files', inputFiles)
+    // console.log('is file', isFile)
+    let inputFiles = isFile ? [inputFile] : 
+        fs.readdirSync(inputFile)
+        .filter(each => each.endsWith('.vm'))
+        .map(each => `${inputFile}/${each}`)
+    // console.log('input files', inputFiles)
 
     
     let codewriter = new codeWriter(inputFile, isFile)
     // handle the bootstrap code
     codewriter.writeInit()
     inputFiles.forEach((eachfile) => {
+        console.log('reading file...', eachfile)
         let parser = new Parser(eachfile)
         while(parser.hasMoreCommands()) {
             let command = parser.advance()
-            console.log(parser.currentIndex, command)
+            // console.log(parser.currentIndex, command)
             let commandList = command.split(' ')
             if (arithmeticCommands.includes(commandList[0])) {
                 codewriter.writeArithmetic(parser.currentIndex ,commandList)
