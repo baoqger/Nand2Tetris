@@ -428,8 +428,10 @@ function main() {
 
     
     let codewriter = new codeWriter(inputFile, isFile)
-    // handle the bootstrap code
-    codewriter.writeInit()
+    // handle the bootstrap code, when the input is a directory
+    if (!isFile) {
+        codewriter.writeInit()
+    }
     inputFiles.forEach((eachfile) => {
         console.log('reading file...', eachfile)
         codewriter.setFileName(eachfile) 
