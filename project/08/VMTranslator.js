@@ -90,6 +90,7 @@ class codeWriter {
             outputfile = `${inputfile}/${this.filename}.asm`
         }
         fs.writeFileSync(outputfile, '') // remove the existing file
+        this.currentReadInVMFile = ''
         this.funcName = 'Bootstrap'
         this.callIndex = 0
         this.fd = fs.openSync(outputfile, 'a')
@@ -97,7 +98,7 @@ class codeWriter {
 
     setFileName(filepath) {
         let filename =  filepath.split('/').slice(-1)[0].split('.')[0]
-        this.filename = filename
+        this.currentReadInVMFile = filename
     }
     
     writeArithmetic(index, command) {
@@ -125,7 +126,7 @@ class codeWriter {
             } else if (segment === 'pointer') {
                 result = this._translatePushPointer(segment, index)
             } else if (segment === 'static') {
-                result = this._translatePushStatic(this.filename, index)
+                result = this._translatePushStatic(this.currentReadInVMFile, index)
             }
         } else if (vmCommand === 'pop') {
             if (segment === 'local' || segment === 'argument' || segment === 'this' || segment === 'that') {
@@ -135,7 +136,7 @@ class codeWriter {
             } else if (segment === 'pointer') {
                 result = this._translatePopPointer(segment, index)
             } else if (segment === 'static') {
-                result = this._translatePopStatic(this.filename, index)
+                result = this._translatePopStatic(this.currentReadInVMFile, index)
             }
         }
         // console.log('asm pushpop...\n', result)
@@ -431,6 +432,7 @@ function main() {
     codewriter.writeInit()
     inputFiles.forEach((eachfile) => {
         console.log('reading file...', eachfile)
+        codewriter.setFileName(eachfile) 
         let parser = new Parser(eachfile)
         while(parser.hasMoreCommands()) {
             let command = parser.advance()
